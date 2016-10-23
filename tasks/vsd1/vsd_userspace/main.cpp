@@ -15,8 +15,7 @@
 class syscall_error : public std::system_error {
 public:
     syscall_error(const std::string &reason)
-        : system_error(errno, std::system_category(),
-                       reason + ": " + std::strerror(errno)) {}
+        : system_error(errno, std::system_category(), reason) {}
 };
 
 class illegal_argv_error : public std::runtime_error {
@@ -30,13 +29,13 @@ long parse_arg_long(char *arg) {
         std::size_t pos = 0;
         long res = std::stol(arg, &pos);
 	if (arg[0] == '\0' || arg[pos] != '\0') {
-	    throw std::invalid_argument("invalid number");
+	    throw std::invalid_argument("");
 	}
 	return res;
     } catch (std::invalid_argument &e) {
-        throw illegal_argv_error(std::string(arg) + " is not a valid number");
+        throw illegal_argv_error("\"" + std::string(arg) + "\" is not a valid number");
     } catch (std::out_of_range &e) {
-        throw illegal_argv_error(std::string(arg) + " is out of range");
+        throw illegal_argv_error("\"" + std::string(arg) + "\" is out of range");
     }
 }
 
@@ -88,7 +87,7 @@ int size_set(int argc, char* argv[]) {
 
 void help() {
     std::cout <<
-        "Usage: ./vsd_userspace <command> <args>\n"
+        "Usage: ./vsd_userspace <command> <args...>\n"
 	"Available commands:\n"
 	"    size_get - no arguments, prints current vsd size\n"
 	"    size_set <new_size> - sets vsd size to <new_size>\n"
