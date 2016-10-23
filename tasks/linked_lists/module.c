@@ -45,8 +45,46 @@ static int __init test_stack(void)
 
 static int __init print_processes_backwards(void)
 {
-    // TODO
-    return -ENODEV;
+    LIST_HEAD(processes_stack);
+    struct task_struct *p;
+    int ret;
+
+    for_each_process(p) {
+        char *task_name;
+        stack_entry_t *cur_proc;
+        task_name = kmalloc(TASK_COMM_LEN, GFP_KERNEL);
+	if (!task_name) {
+	    ret = -ENOMEM;
+	    goto finish;
+	}
+	if (!get_task_comm(task_name, p)) {
+	    kfree(task_name);
+	    ret = -ENOMEM;
+	    goto finish;
+	}
+        assert(get_task_comm(task_name, p));
+        cur_proc = create_stack_entry(task_name);
+	if (!cur_proc) {
+	    kfree(task_name);
+	    ret = -ENOMEM;
+	    goto finish;
+	}
+	stack_push(&processes_stack, cur_proc);
+    }
+    ret = 0;
+    printk(KERN_INFO "Processes found:");
+
+finish:
+    while (!stack_empty(&processes_stack)) {
+        stack_entry_t *cur_proc = stack_pop(&processes_stack);
+	char *task_name = STACK_ENTRY_DATA(cur_proc, char*);
+	if (ret == 0) {
+            printk(KERN_INFO "%s\n", task_name);
+	}
+	kfree(task_name);
+	delete_stack_entry(cur_proc);
+    }
+    return ret;
 }
 
 static int __init ll_init(void)
