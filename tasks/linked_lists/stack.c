@@ -4,7 +4,7 @@
 
 stack_entry_t* create_stack_entry(void *data)
 {
-    stack_entry_t* entry = kmalloc(sizeof(stack_entry_t), GFP_KERNEL);
+    stack_entry_t* entry = kmalloc(sizeof(*entry), GFP_KERNEL);
     if (!entry) {
         return NULL;
     }
