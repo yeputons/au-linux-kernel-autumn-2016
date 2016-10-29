@@ -35,11 +35,8 @@ static int vsd_dev_release(struct inode *inode, struct file *filp)
 static ssize_t vsd_dev_read(struct file *filp,
     char __user *read_user_buf, size_t read_size, loff_t *fpos)
 {
-    if (read_size < 0)
-        return -EINVAL;
-
     if (*fpos < 0)
-        return -EBADF;
+        return -EINVAL;
 
     if (*fpos >= vsd_dev->buf_size)
         return 0;
@@ -172,7 +169,7 @@ static int vsd_driver_probe(struct platform_device *pdev)
         goto error_get_buf;
     }
     vsd_dev->vbuf = phys_to_virt(vsd_phy_mem_buf_res->start);
-    vsd_dev->buf_size = vsd_phy_mem_buf_res->end - vsd_phy_mem_buf_res->start + 1;
+    vsd_dev->buf_size = resource_size(vsd_phy_mem_buf_res);
 
     pr_notice(LOG_TAG "VSD dev with MINOR %u"
         " has started successfully\n", vsd_dev->mdev.minor);
