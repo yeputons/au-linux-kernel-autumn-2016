@@ -1,6 +1,6 @@
 INCLUDE_PATH=../vsd_driver/
 CFLAGS=$(INCLUDE_PATH:%=-I%) -Wall -Wextra -Werror -g
-TARGETS=vsdio vsd_test
+TARGETS=vsdio vsd_test vsd_fork_test
 include ../sub_config.mk
 
 all: $(TARGETS)
