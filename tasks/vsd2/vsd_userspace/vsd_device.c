@@ -25,7 +25,7 @@ int vsd_get_size(size_t *out_size)
 {
     struct vsd_ioctl_get_size_arg arg;
     if (ioctl(fd, VSD_IOCTL_GET_SIZE, &arg)) {
-        return errno;
+        return -1;
     }
     *out_size = arg.size;
     return 0;
