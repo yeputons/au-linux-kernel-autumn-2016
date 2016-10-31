@@ -1,19 +1,20 @@
 INCLUDE_PATH=../vsd_driver/
-CFLAGS=-Wall -Wextra -Werror -g
+CFLAGS=$(INCLUDE_PATH:%=-I%) -Wall -Wextra -Werror -g
+TARGETS=vsdio vsd_test
 include ../sub_config.mk
 
-all: vsdio vsd_test
+all: $(TARGETS)
 
-vsdio: vsdio.c vsd_device.c vsd_device.h
-	gcc $(wordlist 1, 2, $^) -I$(INCLUDE_PATH) $(CFLAGS) -o $@
+$(TARGETS): %: %.o vsd_device.o
+	gcc $^ -o $@
 	cp $@ $(VM_SHARE_PATH)
 
-vsd_test: vsd_test.c vsd_device.c vsd_device.h
-	gcc $(wordlist 1, 2, $^) -I$(INCLUDE_PATH) $(CFLAGS) -o $@
-	cp $@ $(VM_SHARE_PATH)
+$(TARGETS): vsd_device.h
+
+%.o: %.c
+	gcc $< -c $(CFLAGS) -o $@
 
 .PHONY: clean
 
 clean:
-	rm -rf vsdio
-	rm -rf vsd_test
+	rm -rf $(TARGETS) *.o >/dev/null 2>&1
