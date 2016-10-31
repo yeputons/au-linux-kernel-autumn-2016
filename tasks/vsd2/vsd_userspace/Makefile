@@ -1,5 +1,5 @@
 INCLUDE_PATH=../vsd_driver/
-CFLAGS=-Wall -Wextra -Werror
+CFLAGS=-Wall -Wextra -Werror -g
 include ../sub_config.mk
 
 all: vsdio vsd_test
