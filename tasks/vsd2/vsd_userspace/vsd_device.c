@@ -54,14 +54,20 @@ ssize_t vsd_write(const char* src, off_t offset, size_t size)
     return write(fd, src, size);
 }
 
+static int get_size(size_t offset, size_t *size) {
+    if (vsd_get_size(size)) {
+        return -1;
+    }
+    *size = (*size - offset) & ~(getpagesize() - 1);
+    return 0;
+}
+
 void* vsd_mmap(size_t offset)
 {
-    size_t size, pagesize;
-    pagesize = getpagesize();
-    if (vsd_get_size(&size)) {
+    size_t size;
+    if (get_size(offset, &size)) {
         return NULL;
     }
-    size = (size - offset) & ~(pagesize - 1);
     void* result = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, offset);
     if (result == MAP_FAILED) {
         return NULL;
@@ -72,5 +78,9 @@ void* vsd_mmap(size_t offset)
 
 int vsd_munmap(void* addr, size_t offset)
 {
-    return munmap(addr, offset);
+    size_t size;
+    if (get_size(offset, &size)) {
+        return -1;
+    }
+    return munmap(addr, size);
 }
