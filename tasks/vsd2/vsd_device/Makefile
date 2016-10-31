@@ -1,4 +1,5 @@
 MOD_NAME := vsd
+ccflags-y := -Wall -Wextra -Wno-unused-parameter -Werror
 
 ifneq ($(KERNELRELEASE),)
 	obj-m := $(MOD_NAME).o

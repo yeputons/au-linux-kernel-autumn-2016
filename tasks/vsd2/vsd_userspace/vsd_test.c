@@ -14,7 +14,7 @@
     }
 
 static void run_one_test(off_t vsd_offset, size_t vsd_size) {
-    unsigned char *vsd_rw_buf = malloc(vsd_size);
+    char *vsd_rw_buf = malloc(vsd_size);
     size_t i = 0;
     for (; i < vsd_size; ++i) {
         vsd_rw_buf[i] = i % 255;
