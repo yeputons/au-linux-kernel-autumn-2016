@@ -19,6 +19,7 @@ typedef struct vsd_dev {
     char *vbuf;
     size_t buf_size;
     size_t max_buf_size;
+    atomic_t mapped_ctr;
 } vsd_dev_t;
 static vsd_dev_t *vsd_dev;
 
@@ -107,7 +108,7 @@ static long vsd_ioctl_get_size(vsd_ioctl_get_size_arg_t __user *uarg)
 static long vsd_ioctl_set_size(vsd_ioctl_set_size_arg_t __user *uarg)
 {
     vsd_ioctl_set_size_arg_t arg;
-    if (0 /* TODO device is currently mapped */)
+    if (atomic_read(&vsd_dev->mapped_ctr))
         return -EBUSY;
 
     if (copy_from_user(&arg, uarg, sizeof(arg)))
@@ -134,11 +135,11 @@ static long vsd_dev_ioctl(struct file *filp, unsigned int cmd,
     }
 }
 
-static struct vm_operations_struct vsd_dev_vma_ops = {};
-
 static int map_vmalloc_range(struct vm_area_struct *uvma, void *kaddr, size_t size)
 {
     unsigned long uaddr = uvma->vm_start;
+    int result = 0;
+    pr_notice(LOG_TAG "map_vmalloc_range(uaddr=%lx, kaddr=%p, size=%ld)\n", uaddr, kaddr, size);
     if (!PAGE_ALIGNED(uaddr) || !PAGE_ALIGNED(kaddr)
             || !PAGE_ALIGNED(size))
         return -EINVAL;
@@ -151,11 +152,34 @@ static int map_vmalloc_range(struct vm_area_struct *uvma, void *kaddr, size_t si
      * continuous. So we need to map each vmalloced page separetely.
      * Use vmalloc_to_page and vm_insert_page functions for this.
      */
-    // TODO
+    while (size > 0) {
+       result = vm_insert_page(uvma, uaddr, vmalloc_to_page(kaddr));
+       if (result < 0) {
+           return result;
+       }
+       size -= PAGE_SIZE;
+       uaddr += PAGE_SIZE;
+       kaddr += PAGE_SIZE;
+    }
 
     uvma->vm_flags |= VM_DONTEXPAND | VM_DONTDUMP;
     return 0;
 }
+
+static void vsd_vm_open(struct vm_area_struct *vma) {
+    pr_notice(LOG_TAG "vsd_vm_open(start=%lx, end=%lx)\n", vma->vm_start, vma->vm_end);
+    atomic_inc(&vsd_dev->mapped_ctr);
+}
+
+static void vsd_vm_close(struct vm_area_struct *vma) {
+    pr_notice(LOG_TAG "vsd_vm_close(start=%lx, end=%lx)\n", vma->vm_start, vma->vm_end);
+    atomic_dec(&vsd_dev->mapped_ctr);
+}
+
+static struct vm_operations_struct vsd_dev_vma_ops = {
+    .open = vsd_vm_open,
+    .close = vsd_vm_close
+};
 
 static int vsd_dev_mmap(struct file *filp, struct vm_area_struct *vma)
 {
@@ -175,6 +199,7 @@ static int vsd_dev_mmap(struct file *filp, struct vm_area_struct *vma)
         return ret;
 
     vma->vm_ops = &vsd_dev_vma_ops;
+    vma->vm_ops->open(vma);
 
     return 0;
 }
@@ -186,7 +211,8 @@ static struct file_operations vsd_dev_fops = {
     .read = vsd_dev_read,
     .write = vsd_dev_write,
     .llseek = vsd_dev_llseek,
-    .unlocked_ioctl = vsd_dev_ioctl
+    .unlocked_ioctl = vsd_dev_ioctl,
+    .mmap = vsd_dev_mmap
 };
 
 #undef LOG_TAG
